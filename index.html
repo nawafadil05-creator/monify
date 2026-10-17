@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+    <link rel="manifest" href="manifest.json" />
+
+    
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Pocket & Debt Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    /* Hide scrollbars for clean app look */
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-24 antialiased selection:bg-indigo-500">
+
+  <!-- Header -->
+  <header class="pt-8 pb-4 px-5 flex justify-between items-center sticky top-0 bg-slate-950/80 backdrop-blur-md z-10 border-b border-slate-900">
+    <div>
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">My Wallet</p>
+      <h1 class="text-xl font-bold tracking-tight">Financial Overview</h1>
+    </div>
+    <button onclick="openModal()" class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 transition">
+      <i class="fa-solid fa-plus text-sm"></i>
+    </button>
+  </header>
+
+  <!-- Metric Cards -->
+  <main class="max-w-md mx-auto px-5 mt-4 space-y-4">
+    <!-- Pocket Money Card -->
+    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 p-5 rounded-3xl shadow-xl shadow-indigo-900/20 text-white relative overflow-hidden">
+      <div class="relative z-10">
+        <span class="text-xs font-medium text-indigo-200">Pocket Money Left</span>
+        <h2 id="pocketMoney" class="text-3xl font-extrabold mt-1 tracking-tight">$0.00</h2>
+      </div>
+      <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+    </div>
+
+    <!-- Debt Split Cards -->
+    <div class="grid grid-cols-2 gap-3">
+      <!-- Lent Out -->
+      <div class="bg-slate-900/90 border border-slate-800/80 p-4 rounded-2xl">
+        <div class="flex items-center space-x-2 text-emerald-400 mb-1">
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+          <span class="text-xs font-medium">I Lent</span>
+        </div>
+        <p id="totalLent" class="text-xl font-bold tracking-tight text-slate-100">$0.00</p>
+        <span class="text-[10px] text-slate-500">People owe you</span>
+      </div>
+
+      <!-- Borrowed -->
+      <div class="bg-slate-900/90 border border-slate-800/80 p-4 rounded-2xl">
+        <div class="flex items-center space-x-2 text-rose-400 mb-1">
+          <i class="fa-solid fa-arrow-down-left-and-up-right-to-center text-xs"></i>
+          <span class="text-xs font-medium">I Borrowed</span>
+        </div>
+        <p id="totalBorrowed" class="text-xl font-bold tracking-tight text-slate-100">$0.00</p>
+        <span class="text-[10px] text-slate-500">You owe others</span>
+      </div>
+    </div>
+
+    <!-- Transactions List -->
+    <div class="pt-2">
+      <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Activity & Debts</h3>
+      <div id="transactionList" class="space-y-2.5">
+        <!-- Rendered Dynamically -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">Add Transaction</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="txForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        <!-- Type Selection -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Action Type</label>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label class="border border-slate-800 rounded-xl p-2.5 flex items-center space-x-2 cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10">
+              <input type="radio" name="type" value="pocket_add" checked class="accent-indigo-500" onchange="togglePersonField()" />
+              <span>Add Pocket Money</span>
+            </label>
+            <label class="border border-slate-800 rounded-xl p-2.5 flex items-center space-x-2 cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10">
+              <input type="radio" name="type" value="pocket_spend" class="accent-indigo-500" onchange="togglePersonField()" />
+              <span>Expense / Spend</span>
+            </label>
+            <label class="border border-slate-800 rounded-xl p-2.5 flex items-center space-x-2 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/10">
+              <input type="radio" name="type" value="lend" class="accent-emerald-500" onchange="togglePersonField()" />
+              <span>Lent to someone</span>
+            </label>
+            <label class="border border-slate-800 rounded-xl p-2.5 flex items-center space-x-2 cursor-pointer has-[:checked]:border-rose-500 has-[:checked]:bg-rose-500/10">
+              <input type="radio" name="type" value="borrow" class="accent-rose-500" onchange="togglePersonField()" />
+              <span>Borrowed from</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Amount -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Amount ($)</label>
+          <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-lg font-bold text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+
+        <!-- Person Name (Only for Borrow/Lend) -->
+        <div id="personContainer" class="hidden">
+          <label class="block text-xs font-medium text-slate-400 mb-1">Person's Name</label>
+          <input type="text" id="person" placeholder="e.g. John" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+
+        <!-- Note -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Note (Optional)</label>
+          <input type="text" id="note" placeholder="e.g. Lunch, Groceries" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-indigo-600/30">
+          Save Transaction
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // State management
+    let transactions = JSON.parse(localStorage.getItem('wallet_txs') || '[]');
+
+    function saveAndRender() {
+      localStorage.setItem('wallet_txs', JSON.stringify(transactions));
+      render();
+    }
+
+    function togglePersonField() {
+      const type = document.querySelector('input[name="type"]:checked').value;
+      const container = document.getElementById('personContainer');
+      const personInput = document.getElementById('person');
+      if (type === 'lend' || type === 'borrow') {
+        container.classList.remove('hidden');
+        personInput.required = true;
+      } else {
+        container.classList.add('hidden');
+        personInput.required = false;
+      }
+    }
+
+    function openModal() {
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+      document.getElementById('txForm').reset();
+      togglePersonField();
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const type = document.querySelector('input[name="type"]:checked').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const person = document.getElementById('person').value.trim();
+      const note = document.getElementById('note').value.trim();
+
+      const newTx = {
+        id: Date.now(),
+        type,
+        amount,
+        person,
+        note,
+        date: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      };
+
+      transactions.unshift(newTx);
+      saveAndRender();
+      closeModal();
+    }
+
+    function deleteTx(id) {
+      transactions = transactions.filter(t => t.id !== id);
+      saveAndRender();
+    }
+
+    function render() {
+      let pocketMoney = 0;
+      let lentTotal = 0;
+      let borrowedTotal = 0;
+
+      const listEl = document.getElementById('transactionList');
+      listEl.innerHTML = '';
+
+      transactions.forEach(t => {
+        if (t.type === 'pocket_add') pocketMoney += t.amount;
+        if (t.type === 'pocket_spend') pocketMoney -= t.amount;
+        if (t.type === 'lend') {
+          lentTotal += t.amount;
+          pocketMoney -= t.amount; // Giving someone money reduces pocket money
+        }
+        if (t.type === 'borrow') {
+          borrowedTotal += t.amount;
+          pocketMoney += t.amount; // Borrowing cash increases pocket money
+        }
+
+        // Render Item
+        const item = document.createElement('div');
+        item.className = "bg-slate-900 border border-slate-800/80 p-3.5 rounded-2xl flex items-center justify-between";
+
+        let badge = "";
+        let sign = "";
+        let color = "";
+
+        if (t.type === 'pocket_add') {
+          badge = "Added Money";
+          sign = "+$";
+          color = "text-emerald-400";
+        } else if (t.type === 'pocket_spend') {
+          badge = "Spent";
+          sign = "-$";
+          color = "text-slate-400";
+        } else if (t.type === 'lend') {
+          badge = `Lent to ${t.person}`;
+          sign = "Lent $";
+          color = "text-emerald-400";
+        } else if (t.type === 'borrow') {
+          badge = `Borrowed from ${t.person}`;
+          sign = "Owe $";
+          color = "text-rose-400";
+        }
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-xs text-slate-400">
+              <i class="fa-solid ${t.type.includes('pocket') ? 'fa-wallet' : 'fa-hand-holding-dollar'}"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-white leading-tight">${badge}</p>
+              <p class="text-[11px] text-slate-500">${t.note ? t.note + ' • ' : ''}${t.date}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="text-sm font-bold ${color}">${sign}${t.amount.toFixed(2)}</span>
+            <button onclick="deleteTx(${t.id})" class="text-slate-600 hover:text-rose-400 transition text-xs p-1">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+
+      if (transactions.length === 0) {
+        listEl.innerHTML = `<div class="text-center py-10 text-slate-600 text-xs">No transactions recorded yet. Tap + to start.</div>`;
+      }
+
+      document.getElementById('pocketMoney').textContent = `$${pocketMoney.toFixed(2)}`;
+      document.getElementById('totalLent').textContent = `$${lentTotal.toFixed(2)}`;
+      document.getElementById('totalBorrowed').textContent = `$${borrowedTotal.toFixed(2)}`;
+    }
+
+    render();
+  </script>
+</body>
+</html>
